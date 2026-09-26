@@ -36,10 +36,12 @@ framework's auth stack. Four things changed on the way out:
   `Violation` values and an `i18n_key`.
 * *No hashing.* BCrypt hashing stayed behind, where it belongs: mixing policy
   with storage is what tied the original to Kemal.
-* *The length limit is in bytes.* The 72-byte ceiling exists because BCrypt
-  truncates there — and it truncates bytes, not characters. A 40-character
-  accented passphrase is 80 bytes and already past it. The original checked
-  characters.
+* *The length limit is in bytes.* The ceiling exists because of BCrypt, and
+  BCrypt counts bytes: a 40-character accented passphrase is 80 bytes and
+  already over. The original checked characters.
+  The figure is *71*, not the 72 usually quoted — Crystal's `Crypto::Bcrypt`
+  appends a NUL terminator and rejects past 72, so 72 bytes of password become
+  73 and fail. Verified empirically, and it raises rather than truncating.
 
 === Notes
 

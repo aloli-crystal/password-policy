@@ -39,10 +39,13 @@ pile d'authentification d'un framework. Quatre choses ont changé en sortant :
   renvoie maintenant des valeurs `Violation` et une `i18n_key`.
 * *Pas de hachage.* Le hachage BCrypt est resté là où il appartient : mêler la
   politique et le stockage est ce qui liait l'original à Kemal.
-* *La limite de longueur est en octets.* Le plafond de 72 octets existe parce
-  que BCrypt tronque là — et il tronque des octets, pas des caractères. Une
-  phrase de passe accentuée de 40 caractères fait 80 octets et dépasse déjà.
-  L'original contrôlait les caractères.
+* *La limite de longueur est en octets.* Le plafond vient de BCrypt, et BCrypt
+  compte des octets : une phrase de passe accentuée de 40 caractères fait
+  80 octets et dépasse déjà. L'original contrôlait les caractères.
+  Le chiffre est *71*, et non les 72 habituellement cités — le
+  `Crypto::Bcrypt` de Crystal ajoute un octet NUL et rejette au-delà de 72, si
+  bien que 72 octets de mot de passe en font 73 et échouent. Vérifié
+  empiriquement, et il lève au lieu de tronquer.
 
 === Notes
 

@@ -122,10 +122,15 @@ end
 
 [WARNING]
 ====
-BCrypt silently truncates past 72 **bytes**, not characters. `Éé` is two
-characters and four bytes, so a 40-character accented passphrase is already
-past the limit. `Violation::TooManyBytes` catches it; raise `maximum_bytesize`
-if you hash with Argon2 or scrypt, which have no such ceiling.
+Crystal's BCrypt accepts at most **71 bytes**, not characters, and not the 72
+usually quoted: `Crypto::Bcrypt` appends a NUL terminator and rejects past 72,
+so 72 bytes of password become 73 and fail. `Éé` is two characters and four
+bytes, so a 40-character accented passphrase is already over.
+
+It raises rather than truncating, unlike the classic C implementations — which
+makes a password this policy admits and the hashing then refuses a bug in the
+policy. `Violation::TooManyBytes` is what keeps the two in step; raise
+`maximum_bytesize` if you hash with Argon2 or scrypt, which have no ceiling.
 ====
 
 

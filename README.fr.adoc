@@ -128,11 +128,17 @@ end
 
 [WARNING]
 ====
-BCrypt tronque silencieusement au-delà de 72 **octets**, pas de caractères.
+Le BCrypt de Crystal accepte au plus **71 octets**, pas des caractères, et pas
+les 72 habituellement cités : `Crypto::Bcrypt` ajoute un octet NUL et rejette
+au-delà de 72, si bien que 72 octets de mot de passe en font 73 et échouent.
 `Éé` fait deux caractères et quatre octets : une phrase de passe accentuée de
-40 caractères dépasse déjà la limite. `Violation::TooManyBytes` l'attrape ;
-relever `maximum_bytesize` si vous hachez avec Argon2 ou scrypt, qui n'ont pas
-ce plafond.
+40 caractères dépasse déjà.
+
+Il lève au lieu de tronquer, contrairement aux implémentations C classiques —
+ce qui fait qu'un mot de passe admis par cette politique et refusé par le
+hachage est un défaut de la politique. `Violation::TooManyBytes` maintient les
+deux d'accord ; relever `maximum_bytesize` si vous hachez avec Argon2 ou
+scrypt, qui n'ont pas ce plafond.
 ====
 
 

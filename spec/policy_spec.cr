@@ -258,3 +258,21 @@ describe PasswordPolicy::Entropy do
     PasswordPolicy::Entropy::MINIMUM_SPECIAL_SIZE.should eq(37)
   end
 end
+
+describe "the BCrypt ceiling" do
+  # 71, not the 72 usually quoted: Crystal's Crypto::Bcrypt appends a NUL
+  # terminator and rejects past 72, so 72 bytes of password become 73. Pinned
+  # here because the first version of this shard had it wrong.
+  it "defaults to what Crystal's BCrypt actually accepts" do
+    PasswordPolicy::Policy::DEFAULT_MAXIMUM_BYTESIZE.should eq(71)
+  end
+
+  it "admits 71 bytes and refuses 72" do
+    policy = PasswordPolicy::Policy.new(minimum_length: 0,
+      require_uppercase: false, require_lowercase: false,
+      require_digit: false, require_special: false)
+
+    policy.validate("a" * 71).should be_empty
+    policy.validate("a" * 72).should eq([PasswordPolicy::Violation::TooManyBytes])
+  end
+end

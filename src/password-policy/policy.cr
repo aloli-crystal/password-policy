@@ -39,11 +39,19 @@ module PasswordPolicy
     # of service by submitting a megabyte.
     DEFAULT_MAXIMUM_LENGTH = 128
 
-    # BCrypt silently truncates beyond 72 **bytes**, and bytes are what matters:
-    # "Éducation" is nine characters and ten bytes, so a 72-character passphrase
-    # with accents is already past the limit and partly decorative. Argon2 and
-    # scrypt have no such ceiling — raise this if your hashing has none.
-    DEFAULT_MAXIMUM_BYTESIZE = 72
+    # Longest password Crystal's BCrypt accepts, in **bytes** — and bytes are
+    # what matters: "Éducation" is nine characters and ten bytes, so an accented
+    # passphrase reaches the ceiling sooner than its length suggests.
+    #
+    # 71, not the 72 usually quoted. `Crypto::Bcrypt` appends a NUL terminator
+    # (`password.bytesize + 1`) and rejects anything past 72, so 72 bytes of
+    # password become 73 and fail. Verified empirically: 71 hashes, 72 raises.
+    #
+    # Crystal *raises* where the classic C implementations silently truncate —
+    # the better failure of the two, but it means a password this policy admits
+    # and the hashing then refuses is a bug in the policy, not a truncated
+    # secret. Argon2 and scrypt have no such ceiling; raise this if you use one.
+    DEFAULT_MAXIMUM_BYTESIZE = 71
 
     def initialize(
       @minimum_length : Int32 = 12,
