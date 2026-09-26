@@ -1,0 +1,56 @@
+= Changelog
+:toc: left
+:toc-title: Versions
+
+Toutes les modifications notables de `aloli-crystal/password-policy`
+sont documentées ici. Le format suit
+https://keepachangelog.com/1.1.0/[Keep a Changelog] et le
+versioning suit https://semver.org/[SemVer]
+(3 chiffres pour création, 4 pour portage de gem Ruby).
+
+== v0.1.0 — 2026-09-26
+
+=== Ajouté
+
+* `PasswordPolicy::UseCase` — les trois paliers CNIL et leurs entropies
+  minimales (80, 50 et 13 bits), chacun nommant les mesures complémentaires
+  qu'il suppose.
+* `PasswordPolicy::Policy` — règles de composition, longueurs minimale et
+  maximale, nombre de mots d'une phrase de passe, liste d'exclusion, et
+  `#entropy` / `#satisfies_use_case?`. Trois préréglages reprenant les exemples
+  de la CNIL : `.composed`, `.long` et `.passphrase`.
+* `PasswordPolicy::Violation` — les motifs sous forme de valeurs d'énumération,
+  avec `#i18n_key`.
+* `PasswordPolicy::Entropy` — entropie d'un alphabet et d'une phrase de passe.
+
+=== Extrait de kemal-auth, pas copié
+
+Les règles venaient de `aloli-crystal/kemal-auth`, où elles étaient liées à la
+pile d'authentification d'un framework. Quatre choses ont changé en sortant :
+
+* *Le modèle CNIL.* Ces règles appliquaient la recommandation de 2017 — une
+  longueur minimale et quatre classes de caractères obligatoires. La révision
+  de 2022 l'a remplacée par des paliers d'entropie, volontairement, pour
+  permettre des politiques adaptées à leur cas d'usage. Une politique de
+  14 caractères sans caractère spécial est désormais tout aussi acceptable, et
+  plus douce pour les utilisateurs.
+* *Les messages ne sont plus des phrases.* `validate` renvoyait des chaînes
+  françaises codées en dur, ce qui empêchait précisément la réutilisation. Il
+  renvoie maintenant des valeurs `Violation` et une `i18n_key`.
+* *Pas de hachage.* Le hachage BCrypt est resté là où il appartient : mêler la
+  politique et le stockage est ce qui liait l'original à Kemal.
+* *La limite de longueur est en octets.* Le plafond de 72 octets existe parce
+  que BCrypt tronque là — et il tronque des octets, pas des caractères. Une
+  phrase de passe accentuée de 40 caractères fait 80 octets et dépasse déjà.
+  L'original contrôlait les caractères.
+
+=== Notes
+
+* `Policy.composed` calcule 79,6 bits, à un arrondi des 80 que la CNIL énonce
+  pour cet exemple : 26 + 26 + 10 + 37 = 99, et 12 × log2(99) = 79,6. Le
+  chiffre est laissé tel que le calcul le donne ; `.long` et `.passphrase`
+  franchissent le palier des 80 bits.
+* `#entropy` est l'entropie de la politique, pas d'un mot de passe choisi.
+  Noter un mot de passe individuel suppose une estimation de devinabilité, que
+  la CNIL désigne comme la meilleure approche tout en renonçant à en fixer le
+  seuil.

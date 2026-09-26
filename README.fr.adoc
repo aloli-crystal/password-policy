@@ -1,0 +1,169 @@
+= aloli-crystal/password-policy
+:toc: left
+:toc-title: Sommaire
+
+Politiques de mot de passe selon la recommandation CNIL 2022 : paliers d entropie, règles de composition, phrases de passe.
+
+== Pourquoi
+
+Extrait de `aloli-crystal/kemal-auth`, où les règles étaient justes mais liées à
+la pile d'authentification d'un framework, et renvoyaient des phrases françaises
+codées en dur.
+
+L'extraction n'est pas une copie. Ces règles appliquaient la recommandation CNIL
+de *2017* — une longueur minimale et quatre classes de caractères obligatoires.
+Celle du 21 juillet 2022 (délibération 2022-100) l'a remplacée par
+l'**entropie**, délibérément, « afin d'offrir plus de liberté dans la définition
+de politiques de mots de passe robustes et adaptées aux cas d'usage ».
+
+== Les paliers de la CNIL
+
+Trois cas d'usage, trois entropies minimales. Les paliers bas se *méritent* par
+les mesures complémentaires ; ils ne sont pas offerts par le cas d'usage.
+
+[cols="2,1,3",options="header"]
+|===
+|Cas d'usage |Minimum |Mesures complémentaires
+
+|Mot de passe seul — forum, blog
+|80 bits
+|Conseiller l'utilisateur sur un bon mot de passe
+
+|Avec restriction d'accès — e-commerce, compte d'entreprise, webmail. La CNIL le
+qualifie de plus répandu
+|50 bits
+|Temporisation après plusieurs échecs, nombre maximal de tentatives dans un
+délai donné, CAPTCHA, ou blocage après dix échecs
+
+|Avec matériel détenu par la personne — carte bancaire, téléphone
+|13 bits
+|Matériel détenu en propre, plus blocage au bout de trois tentatives échouées
+|===
+
+La recommandation donne trois politiques d'exemple qu'elle déclare équivalentes
+en entropie ; toutes trois sont fournies comme préréglages :
+
+[cols="1,2,1",options="header"]
+|===
+|Préréglage |Règle |Entropie
+
+|`Policy.composed` |≥ 12 caractères, majuscules + minuscules + chiffres + spéciaux (parmi ≥ 37) |79,6 bits
+|`Policy.long` |≥ 14 caractères, majuscules + minuscules + chiffres, sans spécial obligatoire |83,4 bits
+|`Policy.passphrase` |≥ 7 mots |89,4 bits
+|===
+
+[NOTE]
+====
+`Policy.composed` calcule *79,6* bits, à un arrondi des 80 que la CNIL énonce
+pour cet exemple : 26 + 26 + 10 + 37 = 99 caractères, et 12 × log2(99) = 79,6.
+Gonfler l'alphabet des caractères spéciaux pour faire passer le chiffre
+reviendrait à arranger le calcul pour qu'il corresponde à la conclusion ; le
+chiffre reste donc tel quel. Il franchit largement le palier des 50 bits, là où
+se situe une application web dotée d'une restriction d'accès ; pour le palier
+des 80 bits, utiliser `.long` ou `.passphrase`.
+====
+
+Proposer les deuxième et troisième préréglages n'est pas un détail. Imposer un
+caractère spécial à tout le monde n'apporte aucune entropie que le quatorzième
+caractère ne donnerait, et pousse les utilisateurs vers le prévisible
+`Motdepasse1!` — précisément ce que la liste de mots de passe « complexes mais
+connus », ajoutée en 2022, existe pour attraper.
+
+== Ce qu'il ne fait pas
+
+*Il ne hache pas.* Cela revient à la pile qui stocke le résultat —
+`marten-auth`, ou `Crypto::Bcrypt` directement. Mêler les deux est ce qui liait
+les règles d'origine à un framework.
+
+*Il ne note pas un mot de passe individuel.* `Policy#entropy` est l'entropie de
+la *politique*, sur l'ensemble des mots de passe qu'elle admet. Appliqué à un
+mot de passe choisi, `log2(alphabet ** longueur)` ne mesure rien d'utile :
+`Password1234!` satisfait une politique de douze caractères à quatre classes et
+obtient 78 bits, tout en figurant parmi les premiers essais de n'importe quel
+outil de cassage. Juger un mot de passe suppose d'estimer sa *devinabilité* — que
+la CNIL désigne comme la meilleure approche avant de renoncer à en fixer le
+seuil, faute d'outils accessibles aux utilisateurs francophones.
+`Policy#forbidden` couvre la part pratique du problème.
+
+== Installation
+
+[source,yaml]
+----
+dependencies:
+  password-policy:
+    github: aloli-crystal/password-policy
+    version: "~> 0.1"
+----
+
+== Démarrage rapide
+
+[source,crystal]
+----
+require "password-policy"
+
+policy = PasswordPolicy::Policy.long        # 14 caractères, sans spécial obligatoire
+
+policy.entropy               # => 83.4
+policy.satisfies_use_case?   # => true — franchit le palier des 50 bits
+
+violations = policy.validate(soumis)
+if violations.empty?
+  accepter
+else
+  # Des valeurs, pas des phrases : votre application possède la formulation
+  # et la langue.
+  violations.map(&.i18n_key)  # => ["password_policy.too_short", ...]
+end
+----
+
+À affirmer dans votre propre suite, pour qu'un assouplissement de la politique
+fasse échouer un build :
+
+[source,crystal]
+----
+it "atteint le palier CNIL que nous revendiquons" do
+  POLICY.satisfies_use_case?.should be_true
+end
+----
+
+[WARNING]
+====
+BCrypt tronque silencieusement au-delà de 72 **octets**, pas de caractères.
+`Éé` fait deux caractères et quatre octets : une phrase de passe accentuée de
+40 caractères dépasse déjà la limite. `Violation::TooManyBytes` l'attrape ;
+relever `maximum_bytesize` si vous hachez avec Argon2 ou scrypt, qui n'ont pas
+ce plafond.
+====
+
+
+== Statut
+
+* *Version* : voir https://github.com/aloli-crystal/password-policy/releases[releases GitHub]
+* *Branche par défaut* : `production`
+* *Licence* : MIT (voir `LICENSE`)
+
+== Documentation
+
+* https://aloli-crystal.github.io/password-policy/[Site documentaire Antora] (à venir)
+* `CHANGELOG.fr.adoc` — historique des versions
+* `CHANGELOG.adoc` — version anglaise
+
+== Conventions ALOLI
+
+Ce shard suit les conventions de l'écosystème
+https://github.com/aloli-crystal[aloli-crystal/*] :
+
+* Constante `VERSION` lue au compile-time depuis `shard.yml` —
+  pas de désynchro possible.
+* CLI : `password-policy help [<sub>]` (équivalent UX standard de
+  `--help` + focus par sous-commande).
+* Branche par défaut `production` (pas `main`).
+* Versioning SemVer 3-chiffres pour création, 4-chiffres pour
+  portage de gem Ruby.
+
+Pour démarrer un nouveau shard avec ces conventions :
+https://github.com/aloli-crystal/shard-template[aloli-crystal/shard-template].
+
+== Licence
+
+MIT — voir `LICENSE`.

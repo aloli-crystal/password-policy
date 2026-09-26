@@ -1,0 +1,52 @@
+= Changelog
+:toc: left
+:toc-title: Versions
+
+All notable changes to `aloli-crystal/password-policy` are documented
+here. The format follows
+https://keepachangelog.com/1.1.0/[Keep a Changelog] and
+versioning follows https://semver.org/[SemVer]
+(3-digit for creations, 4-digit for ports of Ruby gems).
+
+== v0.1.0 — 2026-09-26
+
+=== Added
+
+* `PasswordPolicy::UseCase` — the three CNIL tiers and their minimum entropies
+  (80, 50 and 13 bits), each naming the complementary measures it assumes.
+* `PasswordPolicy::Policy` — composition rules, minimum and maximum length,
+  passphrase word count, a denylist, and `#entropy` / `#satisfies_use_case?`.
+  Three presets matching the CNIL's own worked examples: `.composed`, `.long`
+  and `.passphrase`.
+* `PasswordPolicy::Violation` — reasons as enum values, with `#i18n_key`.
+* `PasswordPolicy::Entropy` — entropy of an alphabet and of a passphrase.
+
+=== Extracted from kemal-auth, not copied
+
+The rules came from `aloli-crystal/kemal-auth`, where they were bound to one
+framework's auth stack. Four things changed on the way out:
+
+* *The CNIL model.* Those rules implemented the 2017 recommendation — a minimum
+  length plus four mandatory character classes. The 2022 revision replaced that
+  with entropy tiers on purpose, to allow policies suited to their use case.
+  A 14-character policy with no special character is now equally acceptable,
+  and easier on users.
+* *Messages are no longer sentences.* `validate` returned hardcoded French
+  strings, which is what stopped the rules being reusable. It now returns
+  `Violation` values and an `i18n_key`.
+* *No hashing.* BCrypt hashing stayed behind, where it belongs: mixing policy
+  with storage is what tied the original to Kemal.
+* *The length limit is in bytes.* The 72-byte ceiling exists because BCrypt
+  truncates there — and it truncates bytes, not characters. A 40-character
+  accented passphrase is 80 bytes and already past it. The original checked
+  characters.
+
+=== Notes
+
+* `Policy.composed` computes to 79.6 bits, a rounding short of the 80 the CNIL
+  states for that example: 26 + 26 + 10 + 37 = 99, and 12 × log2(99) = 79.6.
+  The figure is left as the arithmetic gives it; `.long` or `.passphrase` clear
+  the 80-bit tier.
+* `#entropy` is the entropy of the policy, not of a chosen password. Scoring an
+  individual password requires guessability estimation, which the CNIL names as
+  the better approach while declining to set a threshold for it.

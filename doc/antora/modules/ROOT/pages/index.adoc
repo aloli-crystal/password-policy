@@ -1,0 +1,22 @@
+= password-policy
+:description: Politiques de mot de passe selon la recommandation CNIL 2022 : paliers d entropie, règles de composition, phrases de passe.
+
+Politiques de mot de passe selon la recommandation CNIL 2022 : paliers d entropie, règles de composition, phrases de passe.
+
+== Statut
+
+* *Version* : {page-component-display-version}
+* *Repo* : https://github.com/aloli-crystal/password-policy[aloli-crystal/password-policy]
+* *Licence* : MIT
+
+== Quickstart
+
+[source,crystal]
+----
+require "password-policy"
+
+# … exemple d'utilisation …
+----
+
+Pour les détails, voir xref:usage.adoc[Utilisation] ou
+xref:api.adoc[API].

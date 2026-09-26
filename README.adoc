@@ -1,0 +1,163 @@
+= aloli-crystal/password-policy
+:toc: left
+:toc-title: Contents
+
+Password policies following the CNIL 2022 recommendation: entropy tiers, composition rules, passphrases.
+
+== Why
+
+Extracted from `aloli-crystal/kemal-auth`, where the rules were sound but bound
+to one web framework's auth stack, and returned hardcoded French sentences.
+
+The extraction is not a copy. The rules there implemented the CNIL's *2017*
+recommendation — a minimum length plus four mandatory character classes. The
+recommendation of 21 July 2022 (délibération 2022-100) replaced that with
+**entropy**, deliberately, "afin d'offrir plus de liberté dans la définition de
+politiques de mots de passe robustes et adaptées aux cas d'usage".
+
+== The CNIL tiers
+
+Three use cases, three minimum entropies. The lower bars are *earned* by the
+complementary measures, not granted by the use case.
+
+[cols="2,1,3",options="header"]
+|===
+|Use case |Minimum |Complementary measures
+
+|Password alone — forum, blog
+|80 bits
+|Advise the user on choosing a good password
+
+|With access restriction — e-commerce, company account, webmail. The CNIL calls
+this the most widespread
+|50 bits
+|Delay after repeated failures, a cap on attempts per period, a CAPTCHA, or
+lock-out after ten failures
+
+|With hardware the person holds — bank card, phone
+|13 bits
+|Hardware held in their own name, plus lock-out after three failed attempts
+|===
+
+The recommendation gives three example policies it states are equivalent in
+entropy, all provided here as presets:
+
+[cols="1,2,1",options="header"]
+|===
+|Preset |Rule |Entropy
+
+|`Policy.composed` |≥ 12 characters, upper + lower + digits + special (from a set of ≥ 37) |79.6 bits
+|`Policy.long` |≥ 14 characters, upper + lower + digits, no special required |83.4 bits
+|`Policy.passphrase` |≥ 7 words |89.4 bits
+|===
+
+[NOTE]
+====
+`Policy.composed` computes to *79.6* bits, a rounding short of the 80 the CNIL
+states for it: 26 + 26 + 10 + 37 = 99 characters, and 12 × log2(99) = 79.6.
+Inflating the special alphabet to make the number pass would be arranging the
+arithmetic to fit the conclusion, so the figure stands as it is. It clears the
+50-bit tier comfortably, which is where a web application with access
+restriction belongs; for the 80-bit tier, use `.long` or `.passphrase`.
+====
+
+Offering the second and third presets matters. Forcing a special character on
+everybody buys no entropy the fourteenth character would not, and pushes users
+towards the predictable `Motdepasse1!` — which is exactly what the 2022
+revision's new denylist of "complex but known" passwords exists to catch.
+
+== What it does not do
+
+*It does not hash.* That belongs to the stack which stores the result —
+`marten-auth`, or `Crypto::Bcrypt` directly. Bundling the two is what tied the
+original rules to one framework.
+
+*It does not score an individual password.* `Policy#entropy` is the entropy of
+the *policy*, across every password it admits. Applied to one chosen password,
+`log2(alphabet ** length)` measures nothing useful: `Password1234!` satisfies a
+twelve-character four-class policy and scores 78 bits while being among the
+first things any cracker tries. Judging one password means estimating how
+*guessable* it is — which the CNIL names as the better approach, then declines
+to set a threshold for, since the tooling is not available to French-speaking
+users. `Policy#forbidden` covers the practical part of that problem.
+
+== Install
+
+[source,yaml]
+----
+dependencies:
+  password-policy:
+    github: aloli-crystal/password-policy
+    version: "~> 0.1"
+----
+
+== Quickstart
+
+[source,crystal]
+----
+require "password-policy"
+
+policy = PasswordPolicy::Policy.long        # 14 characters, no special required
+
+policy.entropy               # => 83.4
+policy.satisfies_use_case?   # => true — clears the 50-bit tier
+
+violations = policy.validate(submitted)
+if violations.empty?
+  accept
+else
+  # Values, not sentences: your application owns the wording and the language.
+  violations.map(&.i18n_key)  # => ["password_policy.too_short", ...]
+end
+----
+
+Assert compliance in your own suite, so loosening the policy fails a build:
+
+[source,crystal]
+----
+it "meets the CNIL tier we claim" do
+  POLICY.satisfies_use_case?.should be_true
+end
+----
+
+[WARNING]
+====
+BCrypt silently truncates past 72 **bytes**, not characters. `Éé` is two
+characters and four bytes, so a 40-character accented passphrase is already
+past the limit. `Violation::TooManyBytes` catches it; raise `maximum_bytesize`
+if you hash with Argon2 or scrypt, which have no such ceiling.
+====
+
+
+== Status
+
+* *Version* : see https://github.com/aloli-crystal/password-policy/releases[GitHub releases]
+* *Default branch* : `production`
+* *License* : MIT (see `LICENSE`)
+
+== Documentation
+
+* https://aloli-crystal.github.io/password-policy/[Antora doc site] (upcoming)
+* `CHANGELOG.adoc` — version history
+* `CHANGELOG.fr.adoc` — French version
+
+== ALOLI conventions
+
+This shard follows the
+https://github.com/aloli-crystal[aloli-crystal/*] ecosystem
+conventions:
+
+* `VERSION` constant read at compile-time from `shard.yml` —
+  cannot drift.
+* CLI accepts `password-policy help [<sub>]` (UX-standard equivalent
+  of `--help` + per-subcommand focus).
+* Default branch is `production` (never `main`).
+* SemVer 3-digit for original creations, 4-digit for ports of
+  Ruby gems.
+
+To start a new shard with these conventions, see
+https://github.com/aloli-crystal/shard-template[aloli-crystal/shard-template].
+
+== License
+
+MIT — see `LICENSE`.

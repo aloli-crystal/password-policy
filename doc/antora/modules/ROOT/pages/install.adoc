@@ -1,0 +1,30 @@
+= Installation
+
+== Comme dépendance d'un autre shard
+
+Ajoutez à votre `shard.yml` :
+
+[source,yaml]
+----
+dependencies:
+  password-policy:
+    github: aloli-crystal/password-policy
+    version: "~> 0.1"
+----
+
+Puis :
+
+[source,shell]
+----
+shards install
+----
+
+== En local pour développer
+
+[source,shell]
+----
+git clone git@github.com:aloli-crystal/password-policy.git
+cd password-policy
+shards install
+crystal spec       # lancer les tests
+----
