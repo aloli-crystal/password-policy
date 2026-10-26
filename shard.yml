@@ -1,5 +1,5 @@
 name: password-policy
-version: 0.1.0
+version: 0.1.1
 
 description: |
   Password policies for Crystal, following the CNIL 2022 recommendation
